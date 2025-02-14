@@ -3,3 +3,7 @@ pytesseract==0.3.10
 easyocr==1.6.2
 google-cloud-vision==3.3.0
 Pillow==10.0.0
+
+# PyTorch CPU only (para que no busque CUDA/GPU)
+torch==1.13.1
+torchvision==0.14.1
