@@ -4,6 +4,6 @@ easyocr==1.6.2
 google-cloud-vision==3.3.0
 Pillow==10.0.0
 
-# PyTorch CPU only (para que no busque CUDA/GPU)
-torch==1.13.1
-torchvision==0.14.1
+# PyTorch CPU only (compatible con Python 3.11)
+torch==2.0.1
+torchvision==0.15.2
