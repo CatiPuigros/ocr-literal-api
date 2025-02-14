@@ -1,12 +1,10 @@
 Flask==2.3.2
 pytesseract==0.3.10
-easyocr==1.6.2
+# Usa la versión nueva de EasyOCR:
+easyocr==1.7.0
 google-cloud-vision==3.3.0
 Pillow==10.0.0
 
-# PyTorch CPU only (compatible con Python 3.11)
 torch==2.0.1
 torchvision==0.15.2
-
-# Numpy compatible con Python 3.11
 numpy==1.26.0
