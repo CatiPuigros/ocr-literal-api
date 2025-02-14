@@ -1,16 +1,10 @@
 import os
 import io
 import pytesseract
+import easyocr
 from flask import Flask, request, jsonify
 from PIL import Image
 from google.cloud import vision
-
-# Intentar importar EasyOCR sin romper la ejecución
-try:
-    import easyocr
-    EASYOCR_AVAILABLE = True
-except ImportError:
-    EASYOCR_AVAILABLE = False
 
 # Configurar Flask
 app = Flask(__name__)
@@ -19,15 +13,15 @@ app = Flask(__name__)
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "google_credentials.json"
 vision_client = vision.ImageAnnotatorClient()
 
-# Si EasyOCR está disponible, inicializarlo
-if EASYOCR_AVAILABLE:
-    easy_reader = easyocr.Reader(['es', 'en', 'fr', 'de'], gpu=False)
+# Inicializar EasyOCR con los idiomas clave (sin traducción, solo transcripción)
+easy_reader = easyocr.Reader(['es', 'en', 'fr', 'de'], gpu=False)
 
 # Idiomas disponibles para Tesseract
 TESSERACT_LANGUAGES = "spa+eng+fra+deu"
 
 # Umbral de confianza para marcar "[ILEGIBLE]"
 CONFIDENCE_THRESHOLD = 0.7
+
 
 def extract_text_tesseract(image):
     """ Extrae texto con Tesseract, sin corrección automática. """
@@ -37,6 +31,7 @@ def extract_text_tesseract(image):
     except Exception as e:
         print("Error en Tesseract:", e)
         return "[ILEGIBLE]"
+
 
 def extract_text_google_vision(image):
     """ Extrae texto con Google Vision si Tesseract no logra resultados. """
@@ -56,19 +51,24 @@ def extract_text_google_vision(image):
         print("Error en Google Vision:", e)
         return "[ILEGIBLE]"
 
+
 def extract_text_easyocr(image_path):
-    """ Extrae texto con EasyOCR solo si está instalado. """
-    if not EASYOCR_AVAILABLE:
-        return "[EasyOCR NO DISPONIBLE]"
-    
+    """ Extrae texto con EasyOCR, si Tesseract y Google Vision fallan. """
     try:
-        result = easy_reader.readtext(image_path, detail=1)  
+        result = easy_reader.readtext(image_path, detail=1)
         palabras = [text if conf >= CONFIDENCE_THRESHOLD else "[ILEGIBLE]" for (_, text, conf) in result]
         texto_final = " ".join(palabras).strip()
         return texto_final if texto_final else "[ILEGIBLE]"
     except Exception as e:
         print("Error en EasyOCR:", e)
         return "[ILEGIBLE]"
+
+
+@app.route("/", methods=["GET"])
+def home():
+    """ Endpoint para la raíz (GET /) """
+    return jsonify({"message": "API de OCR activa. Usa POST /ocr para enviar imágenes."})
+
 
 @app.route("/ocr", methods=["POST"])
 def ocr_endpoint():
@@ -90,7 +90,7 @@ def ocr_endpoint():
     else:
         google_text = "[NO NECESARIO]"
 
-    # Paso 3: Si Google Vision también falla, usa EasyOCR si está disponible
+    # Paso 3: Si Google Vision también falla, usa EasyOCR
     if tesseract_text == "[ILEGIBLE]" and google_text == "[ILEGIBLE]":
         easyocr_text = extract_text_easyocr(image_path)
     else:
@@ -102,6 +102,6 @@ def ocr_endpoint():
         "easyocr": easyocr_text
     })
 
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
-
