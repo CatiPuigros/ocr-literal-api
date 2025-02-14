@@ -129,4 +129,5 @@ def ocr_endpoint():
     })
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    # Nota: Si ya tienes port=5000, añade host='0.0.0.0'
+    app.run(host='0.0.0.0', port=5000, debug=True)
