@@ -1,11 +1,11 @@
 import os
 import io
+import base64
 import pytesseract
 from flask import Flask, request, jsonify
 from PIL import Image
 from google.cloud import vision
 
-# Configurar Flask
 app = Flask(__name__)
 
 # Configurar credenciales de Google Vision
@@ -54,15 +54,27 @@ def home():
 @app.route("/ocr", methods=["POST"])
 def ocr_endpoint():
     """Endpoint para recibir una imagen y extraer texto."""
-    if "file" not in request.files:
-        return jsonify({"error": "No se envió ninguna imagen"}), 400
+    
+    # 1) Intentar obtener la imagen como archivo (campo "file" en form-data)
+    if "file" in request.files:
+        file = request.files["file"]
+        try:
+            image = Image.open(file)
+        except Exception:
+            return jsonify({"error": "El archivo no es una imagen válida"}), 400
 
-    file = request.files["file"]
+    # 2) Si no viene "file", intentamos base64 en el cuerpo JSON (campo "image_base64")
+    else:
+        data = request.get_json()
+        if not data or "image_base64" not in data:
+            return jsonify({"error": "No se envió ninguna imagen (ni archivo ni base64)"}), 400
 
-    try:
-        image = Image.open(file)
-    except Exception as e:
-        return jsonify({"error": "El archivo no es una imagen válida"}), 400
+        try:
+            image_data = base64.b64decode(data["image_base64"])
+            image = Image.open(io.BytesIO(image_data))
+        except Exception as e:
+            print("Error decodificando base64:", e)
+            return jsonify({"error": "No se pudo decodificar la imagen base64"}), 400
 
     # Paso 1: Intenta extraer texto con Tesseract
     tesseract_text = extract_text_tesseract(image)
