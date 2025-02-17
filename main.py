@@ -55,7 +55,7 @@ def home():
 def ocr_endpoint():
     """Endpoint para recibir una imagen y extraer texto."""
     
-    # Intentar obtener la imagen enviada como archivo (form-data)
+    # 1. Intentar obtener la imagen enviada como archivo (form-data)
     if "file" in request.files:
         file = request.files["file"]
         try:
@@ -63,14 +63,22 @@ def ocr_endpoint():
         except Exception:
             return jsonify({"error": "El archivo no es una imagen válida"}), 400
 
-    # Si no viene "file", intentar obtener la imagen en formato base64 desde JSON
+    # 2. Si no viene "file", intentar obtener la imagen en formato base64 desde JSON
     else:
         data = request.get_json(silent=True)
         if not data or "image_base64" not in data:
             return jsonify({"error": "No se envió ninguna imagen (ni archivo ni base64)"}), 400
 
         try:
-            image_data = base64.b64decode(data["image_base64"])
+            # Extraer el string base64
+            image_data_str = data["image_base64"]
+            
+            # Si viene con el prefijo "data:image/...", lo removemos
+            if image_data_str.startswith("data:image/"):
+                image_data_str = image_data_str.split(",", 1)[1]
+            
+            # Decodificar la imagen
+            image_data = base64.b64decode(image_data_str)
             image = Image.open(io.BytesIO(image_data))
         except Exception as e:
             print("Error decodificando base64:", e)
@@ -94,4 +102,3 @@ if __name__ == "__main__":
     # Usar el puerto asignado por Render o el 5000 por defecto
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
-
