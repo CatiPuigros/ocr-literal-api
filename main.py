@@ -55,7 +55,7 @@ def home():
 def ocr_endpoint():
     """Endpoint para recibir una imagen y extraer texto."""
     
-    # 1) Intentar obtener la imagen como archivo (campo "file" en form-data)
+    # Intentar obtener la imagen enviada como archivo (form-data)
     if "file" in request.files:
         file = request.files["file"]
         try:
@@ -63,9 +63,9 @@ def ocr_endpoint():
         except Exception:
             return jsonify({"error": "El archivo no es una imagen válida"}), 400
 
-    # 2) Si no viene "file", intentamos base64 en el cuerpo JSON (campo "image_base64")
+    # Si no viene "file", intentar obtener la imagen en formato base64 desde JSON
     else:
-        data = request.get_json()
+        data = request.get_json(silent=True)
         if not data or "image_base64" not in data:
             return jsonify({"error": "No se envió ninguna imagen (ni archivo ni base64)"}), 400
 
@@ -76,10 +76,10 @@ def ocr_endpoint():
             print("Error decodificando base64:", e)
             return jsonify({"error": "No se pudo decodificar la imagen base64"}), 400
 
-    # Paso 1: Intenta extraer texto con Tesseract
+    # Paso 1: Extraer texto con Tesseract
     tesseract_text = extract_text_tesseract(image)
 
-    # Paso 2: Si Tesseract devuelve "[ILEGIBLE]", usa Google Vision
+    # Paso 2: Si Tesseract no pudo extraer texto, usar Google Vision
     if tesseract_text == "[ILEGIBLE]":
         google_text = extract_text_google_vision(image)
     else:
@@ -91,4 +91,7 @@ def ocr_endpoint():
     })
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    # Usar el puerto asignado por Render o el 5000 por defecto
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
+
